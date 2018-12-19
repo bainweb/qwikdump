@@ -5,7 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "fastify": "^1.13.1",
-    "fastify-multipart": "^0.5.1",
+    "fastify-multipart": "git+https://github.com/obscure-web/fastify-multipart.git",
     "fastify-static": "^1.0.0",
     "fs": "0.0.1-security",
     "path": "^0.12.7",
