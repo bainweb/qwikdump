@@ -1,87 +1,75 @@
 const config = require('../config');
+const log = require('../log');
+const files = require('../files');
 const fs = require('fs');
 const path = require('path');
-const pump = require('pump');
-const sanitize = require('sanitize-filename');
+const util = require('util');
+const { pipeline } = require('stream')
+const pump = util.promisify(pipeline)
 const shortid = require('shortid');
-
 module.exports = routes;
 
 async function routes(fastify) {
+    fastify.register(require('fastify-rate-limit'), { max: config.rateLimits.uploadsPerMinute});
     fastify.post('/upload', upload);
 }
 
-function deleteUpload(id) {
-    fs.unlink(path.join(config.metaDir, id), err => err && console.error(err));
-    fs.unlink(path.join(config.uploadsDir, id), err => err && console.error(err));
-}
-
-function handle(id, req) {
-    return (field, file, filename, encoding, mimetype) => {
-        writeMeta(id, req.headers, filename, mimetype);
-        pump(file, fs.createWriteStream(path.join(config.uploadsDir, id)));
+// early out if our content length is much larger than our maximum file size
+function checkContentLength(id, req, res) {
+    if (req.headers['content-length'] > config.multipart.limits.fileSize + 228) {
+        throw {statusCode: 413};
     }
 }
 
-function logFileSizeLimit(id) {
-    console.log(id, 'File limit exceeded at', Date.now());
-}
-
-function logUploadEnd(id, req, filename) {
-    console.log(id, 'Host', req.headers.host, 'uploaded', filename, 'at', Date.now());
-}
-
-function logUploadStart(id, req, filename) {
-    console.log(id, 'Host', req.headers.host, 'uploading', filename, 'at', Date.now());
-}
-
-function onFileSizeLimit(id, res) {
-    return () => {
-        logFileSizeLimit(id);
-        res.error = 'File size limit exceeded';
-        deleteUpload(id);
+// send a 200 or 500 response
+function respond(id, res, err) {
+    err = err || res.error;
+    if (err) {
+        return res.code(500).send(err);
     }
+    res.type('text/html').send('<a href="/f/' + id + '">Here it is</a>');
 }
 
-function respond(id, res) {
-    return err => {
-        err = err || res.error;
-        if (err) return res.code(500).send(err);
-        res.type('text/html').send('<a href="/f/' + id + '">Here it is</a>');
-    }
+// handle attempt to upload too large of a file
+async function respondTooBuku(id, req, res) {
+    log(id, 'Too buku');
+    
+    // delete partial file if it exists
+    files.unlink(id);
+    
+    // send 'Payload Too Large' response
+    res.status(413).send(`File size limit exceeded (${config.multipart.limits.fileSize} bytes)`);
+
+    // give the browser a second to display our error message
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // destroy socket connection since most browsers ignore standards and continue to send data after they receive errors
+    req.socket.destroy('tl;dr');
 }
 
-function upload(req, res) {
+// upload route
+async function upload(req, res) {
     const id = shortid.generate();
-    const mp = req.multipart(handle(id, req), respond(id, res));
-    
-    mp.on('field', saveFieldToBody(req));
-    
-    mp.on('file', function(field, file, filename) {
-        logUploadStart(id, req, filename);
-        file.on('end', () => {
-            logUploadEnd(id, req, filename);
-        });
-        file.on('limit', onFileSizeLimit(id, res));
-    });
-}
-
-function saveFieldToBody(req) {
-    return (key, value) => {
-        req.body = req.body || {};
-        req.body[key] = value;
-    };
-}
-
-function writeMeta(id, headers, filename, mimetype) {
-    return fs.writeFileSync(
-        path.join(config.metaDir, id),
-        JSON.stringify({
-            headers: headers,
-            file: {
-                name: sanitize(filename),
-                mimetype: mimetype
-            }
-        }, 0, 2)
-    );
+    log(id, 'Upload requested from', req.socket.remoteAddress);
+    try {
+        checkContentLength(id, req, res);
+        
+        const data = await req.file();
+        log(id, 'upload started', data.filename);
+        await pump(data.file, fs.createWriteStream(files.paths.file(id)));
+        log(id, 'upload finished', data.filename);
+        await files.writeMeta(id, req.headers, data.filename, data.mimetype);
+        log(id, 'meta file created');
+        
+        respond(id, res);
+    }
+    catch (err) {
+        if (err.statusCode === 413) {
+            respondTooBuku(id, req, res);   
+        }
+        else {
+            console.error(id, err);
+            respond(id, res, "Server exploded");
+        }
+    }
 }

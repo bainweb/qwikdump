@@ -1,0 +1,15 @@
+{
+    "listenHost": "0.0.0.0",
+    "listenPort": 3000,
+    "uploadsDir": "uploads",
+    "rateLimits": {
+        "uploadsPerMinute": 5,
+        "downloadsPerMinute": 5
+    },
+    "multipart": {
+        "limits": {
+            "files": 1,
+            "fileSize": 10485760
+        }
+    }
+}
