@@ -6,11 +6,16 @@ Bare-bones node.js file hosting server built with fastify
 git clone https://github.com/obscure-web/qwikdump.git
 cd qwikdump
 npm i
+npm run config
 node .
 ```
 
 ## Configuration
-edit config.json as you wish and restart the server
+Run this command to interactively create or modify your config file
+```
+npm run config
+```
+Alternatively, you can copy config-defaults.json to config.json and modify it manually
 ```
 {
     "listenHost": "0.0.0.0", // change to "localhost" if you do not want to accept external connections
@@ -29,5 +34,5 @@ edit config.json as you wish and restart the server
 }
 ```
 
-## Pull requests
-I will entertain pull requests for bug fixes and maybe new features, but this is intended to be forked and extended to your liking.
+## Contribute
+This is intended to be forked and extended to your liking, but feel free to create merge requests.
