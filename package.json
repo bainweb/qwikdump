@@ -4,6 +4,7 @@
   "description": "Simple node.js file host",
   "main": "index.js",
   "dependencies": {
+    "console-config": "^1.0.2",
     "fastify": "^3.20.1",
     "fastify-multipart": "^4.0.7",
     "fastify-rate-limit": "^5.6.0",
@@ -15,6 +16,7 @@
     "shortid": "^2.2.16"
   },
   "scripts": {
+    "config": "console-config config-defaults.json config.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
