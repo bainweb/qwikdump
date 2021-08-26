@@ -28,7 +28,7 @@ Alternatively, you can copy config-defaults.json to config.json and modify it ma
     "multipart": {
         "limits": {
             "files": 1, // keep this. multiple files per request aren't supported
-            "fileSize": 10485760 // max payload size in bytes
+            "fileSize": 10485760 // max payload size in bytes. be aware that nginx servers have their own request size limits
         }
     }
 }
