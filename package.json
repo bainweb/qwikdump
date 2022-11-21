@@ -5,7 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "console-config": "^1.0.2",
-    "fastify": "^3.20.1",
+    "fastify": "^3.29.4",
     "fastify-multipart": "^4.0.7",
     "fastify-rate-limit": "^5.6.0",
     "fastify-static": "^4.2.2",
